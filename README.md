@@ -126,3 +126,28 @@ ssh -o BatchMode=yes -o PreferredAuthentications=publickey root@localhost
 ```
 
 Chụp ảnh lệnh cùng thông báo `Permission denied (publickey)` bằng `Win+Shift+S`, lưu thành `evidence/04-root-ssh-denied.png`. Đây là SSH local qua WSL2, không phải kết nối tới IP public.
+
+## Bài tập 4: Cấu hình Firewall UFW
+
+Đã cấu hình UFW với mặc định `deny incoming`, `allow outgoing`; chỉ mở `22/tcp` và `8080/tcp`. SSH đang bật port 22 trước khi firewall enable.
+
+Docker published ports có thể đi vòng qua UFW, nên đã thêm rule vào chain `DOCKER-USER` để chặn traffic forwarded tới host port `8081`. Kết quả kiểm tra từ Windows tới IP Ubuntu WSL trong lượt chạy này:
+
+```text
+172.25.210.151:8080 -> HTTP 200 (Nginx)
+172.25.210.151:8081 -> timeout (blocked)
+```
+
+Lưu ý: `localhost:8081` trên Windows vẫn có thể đi qua WSL localhost-forwarding và truy cập được; dùng IP trực tiếp của Ubuntu để quan sát firewall rule. IP WSL có thể đổi sau khi distro khởi động lại. Rule `iptables` trong `DOCKER-USER` hiện là runtime rule và có thể cần tạo lại sau khi Docker/WSL restart.
+
+Các lệnh đã thực thi: [commands-bai-4.txt](commands-bai-4.txt).
+
+Container Docker Desktop có sẵn `butchixanh-shop` cũng dùng Windows port 8080. Container đó đã được tạm dừng để giải phóng cổng, rồi khởi động lại; hiện đã xác nhận trạng thái `Up`. Nginx lab trong Ubuntu được kiểm tra qua IP WSL.
+
+### Ảnh bằng chứng
+
+- Ảnh Nginx 8080 thật đã lưu tại [evidence/06-ufw-8080-nginx.png](evidence/06-ufw-8080-nginx.png).
+- Cần chụp `evidence/05-ufw-status.png`: mở Ubuntu 22.04 bằng root và chạy `ufw status verbose` (hoặc `sudo ufw status verbose`).
+- Cần chụp `evidence/07-ufw-8081-blocked.png`: từ PowerShell chạy `curl.exe -v --max-time 3 http://172.25.210.151:8081/` và chụp lỗi timeout. Không dùng ảnh trang 8080 làm bằng chứng cho 8081.
+
+Đây là bài thực hành local trên WSL2, không có IP public; phép thử là từ Windows host tới interface IP của Ubuntu WSL.

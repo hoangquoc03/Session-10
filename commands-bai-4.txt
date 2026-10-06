@@ -1,0 +1,31 @@
+Bai tap 4 - UFW va kiem tra Nginx
+May: Ubuntu 22.04.5 LTS (WSL2 local, khong phai VPS Cloud)
+
+# Trong Ubuntu 22.04, root shell
+ufw default deny incoming
+ufw default allow outgoing
+ufw allow 22/tcp
+ufw allow 8080/tcp
+ufw --force enable
+ufw status verbose
+
+# Chay hai Nginx container trong Docker Engine cua Ubuntu
+# (8080 can duoc giai phong truoc; app Docker Desktop butchixanh-shop tren Windows
+# da duoc tam dung trong luc kiem tra va da khoi dong lai sau do.)
+docker run -d --name nginx-8080 -p 8080:80 nginx:alpine
+docker run -d --name nginx-8081 -p 8081:80 nginx:alpine
+docker ps --format "table {{.Names}}\t{{.Ports}}"
+
+# Docker published ports co the bypass UFW; them rule vao DOCKER-USER de chan 8081
+iptables -C DOCKER-USER -p tcp -m conntrack --ctorigdstport 8081 -j DROP 2>/dev/null || iptables -I DOCKER-USER 1 -p tcp -m conntrack --ctorigdstport 8081 -j DROP
+iptables -S DOCKER-USER
+
+# Tu Windows host, truy cap truc tiep IP Ubuntu WSL (IP tai lan kiem tra: 172.25.210.151)
+curl -sS -o /dev/null -w 'Ubuntu-IP 8080 HTTP %{http_code}\n' --max-time 5 http://172.25.210.151:8080/
+curl -sS -o /dev/null -w 'Ubuntu-IP 8081 HTTP %{http_code}\n' --max-time 3 http://172.25.210.151:8081/
+
+# Ket qua da xac minh
+# 8080: HTTP 200 (Nginx)
+# 8081: timeout / HTTP 000 (bi chan tren interface Ubuntu)
+# Luu y: localhost:8081 tren Windows co the di qua WSL localhost-forwarding va tra 200;
+# phep thu firewall dung IP truc tiep cua Ubuntu WSL.
