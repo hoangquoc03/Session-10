@@ -1,0 +1,26 @@
+Bai tap 3 - SSH key authentication va hardening
+May: Ubuntu 22.04.5 LTS (WSL2 local, khong phai VPS Cloud)
+Private key duoc luu trong Windows Temp, khong commit len GitHub.
+
+# Tren may Windows (Git Bash), tao key rieng cho deploy
+ssh-keygen -q -t ed25519 -N "" -f "$TEMP/session10-deploy-key" -C "deploy@local-lab"
+
+# Trong Ubuntu 22.04, cai public key cho deploy
+install -d -m 700 -o deploy -g deploy /home/deploy/.ssh
+install -m 600 -o deploy -g deploy /mnt/c/Users/Laptop/AppData/Local/Temp/session10-deploy-key.pub /home/deploy/.ssh/authorized_keys
+
+# Backup va sua /etc/ssh/sshd_config; cac dong duoc dat truoc Include
+cp -a /etc/ssh/sshd_config /etc/ssh/sshd_config.bak-lab3
+sed -i '1iPermitRootLogin no\nPasswordAuthentication no\nPubkeyAuthentication yes\nKbdInteractiveAuthentication no' /etc/ssh/sshd_config
+
+# Kiem tra cau hinh va khoi dong lai SSH
+sshd -t
+sshd -T | grep -E '^(permitrootlogin|passwordauthentication|pubkeyauthentication|kbdinteractiveauthentication) '
+systemctl restart ssh
+systemctl is-active ssh
+
+# Tren may Windows, xac minh deploy dang nhap bang khoa
+ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -i "$TEMP/session10-deploy-key" deploy@localhost "whoami && docker --version"
+
+# Thu dang nhap root; ket qua mong doi la Permission denied (publickey)
+ssh -o BatchMode=yes -o PreferredAuthentications=publickey -o StrictHostKeyChecking=accept-new root@localhost true

@@ -95,3 +95,34 @@ docker compose version
 ```
 
 Chụp ảnh thật bằng `Win+Shift+S` và lưu thành `evidence/03-deploy-docker-version.png`. Ảnh này là bằng chứng local WSL2, không phải VPS Cloud.
+
+## Bài tập 3: Tăng cường bảo mật SSH
+
+Đã tạo khóa Ed25519 riêng cho `deploy` trên Windows, cài public key vào `/home/deploy/.ssh/authorized_keys` với quyền thư mục `700` và file `600`. Private key nằm trong thư mục Temp của Windows, không có trong repo.
+
+Trong `/etc/ssh/sshd_config`, các cấu hình sau được đặt trước `Include`:
+
+```text
+PermitRootLogin no
+PasswordAuthentication no
+PubkeyAuthentication yes
+KbdInteractiveAuthentication no
+```
+
+`sshd -t` thành công; `sshd -T` xác nhận root login và password authentication bị tắt, public-key authentication được bật. SSH service đã được restart. Đăng nhập `deploy` bằng key thành công; thử đăng nhập `root` bị từ chối:
+
+```text
+root@localhost: Permission denied (publickey).
+```
+
+Các lệnh đã thực thi: [commands-bai-3.txt](commands-bai-3.txt).
+
+### Ảnh từ chối root cần bổ sung
+
+Giữ Ubuntu 22.04 chạy bằng lệnh ở phần bài 1. Mở PowerShell khác và chạy:
+
+```powershell
+ssh -o BatchMode=yes -o PreferredAuthentications=publickey root@localhost
+```
+
+Chụp ảnh lệnh cùng thông báo `Permission denied (publickey)` bằng `Win+Shift+S`, lưu thành `evidence/04-root-ssh-denied.png`. Đây là SSH local qua WSL2, không phải kết nối tới IP public.
