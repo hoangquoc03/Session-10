@@ -55,3 +55,43 @@ Khóa lab được tạo tạm trong thư mục Temp của Windows, không nằm
 ```powershell
 Remove-Item "$env:TEMP\session10-lab-key*"
 ```
+
+## Bài tập 2: User deploy và Docker
+
+Trong Ubuntu 22.04 WSL2, đã tạo user `deploy`, thêm vào hai nhóm `sudo` và `docker`, cài Docker Engine cùng Docker Compose plugin từ repository APT chính thức của Docker. Docker service ở trạng thái `active`; container `hello-world` chạy thành công.
+
+Phiên bản đã kiểm tra dưới user `deploy`:
+
+```text
+Docker version 29.8.2, build 7fc2dff
+Docker Compose version v5.6.0
+```
+
+Danh sách lệnh Linux đã thực thi: [commands-bai-2.txt](commands-bai-2.txt).
+
+User `deploy` đã thuộc nhóm `sudo`, nhưng hiện chưa đặt mật khẩu. Để dùng `sudo` tương tác, mở Ubuntu bằng root và tự đặt mật khẩu cục bộ:
+
+```bash
+passwd deploy
+```
+
+Không chia sẻ mật khẩu trong chat hoặc đưa mật khẩu vào Git.
+
+### Ảnh terminal cần bổ sung
+
+Mở Ubuntu 22.04 bằng root và giữ cửa sổ đó mở:
+
+```powershell
+wsl -d Ubuntu-22.04 -u root
+```
+
+Trong Ubuntu, chạy:
+
+```bash
+su - deploy
+whoami
+docker --version
+docker compose version
+```
+
+Chụp ảnh thật bằng `Win+Shift+S` và lưu thành `evidence/03-deploy-docker-version.png`. Ảnh này là bằng chứng local WSL2, không phải VPS Cloud.
