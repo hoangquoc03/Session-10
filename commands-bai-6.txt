@@ -1,0 +1,30 @@
+Bai tap 6 - deploy QuickBite qua API Gateway
+
+# Tren may build image backend sau khi cap nhat Dockerfile; push image len Docker Hub
+mvn -q -DskipTests package
+docker build -t <dockerhub-user>/order-service:latest .
+docker login
+docker push <dockerhub-user>/order-service:latest
+
+# Tren VPS, copy .env.example thanh .env, dien image tag va mat khau manh
+cp .env.example .env
+# Sua .env truoc khi tiep tuc; khong commit file .env
+
+# Mo firewall truoc khi test gateway; SSH da duoc allow tu bai 4
+sudo ufw allow 8083/tcp
+sudo ufw status verbose
+
+# Pull image va chay he thong ngam
+docker compose pull
+docker compose up -d
+
+# Kiem tra trang thai va log
+docker compose ps
+docker compose logs --tail=100 api-gateway order-service order-db
+
+# Goi API qua gateway
+curl -i http://127.0.0.1:8083/api/health
+
+# Tren local WSL lab, Docker Hub tag chua public; da import image local va test:
+# http://<Ubuntu-WSL-IP>:8083/api/health
+# Ket qua: HTTP 200 {"database":"quickbite_db","status":"UP"}

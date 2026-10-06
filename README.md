@@ -168,12 +168,12 @@ Trong network namespace của `order-service`, `localhost` là chính container 
 
 ### Bản đã sửa
 
-File [docker-compose.yml](docker-compose.yml) dùng URL `jdbc:postgresql://order-db:5432/quickbite_db`, thêm dependency tới `order-db` và healthcheck `pg_isready`. `depends_on` với điều kiện `service_healthy` đợi database sẵn sàng nhận kết nối, thay vì chỉ đợi container được tạo.
+File [docker-compose.bai5.yml](docker-compose.bai5.yml) dùng URL `jdbc:postgresql://order-db:5432/quickbite_db`, thêm dependency tới `order-db` và healthcheck `pg_isready`. `depends_on` với điều kiện `service_healthy` đợi database sẵn sàng nhận kết nối, thay vì chỉ đợi container được tạo.
 
 Để xem bản đầy đủ trước/sau:
 
 - Trước: [docker-compose.before.yml](docker-compose.before.yml)
-- Sau: [docker-compose.yml](docker-compose.yml)
+- Sau: [docker-compose.bai5.yml](docker-compose.bai5.yml)
 
 Log lỗi và log thành công được lưu tại [logs-bai-5-before.txt](logs-bai-5-before.txt) và [logs-bai-5-after.txt](logs-bai-5-after.txt). Các lệnh tái hiện ở [commands-bai-5.txt](commands-bai-5.txt).
 
@@ -185,4 +185,26 @@ GET /health -> HTTP 200
 {"status":"UP","database":"quickbite_db"}
 ```
 
-Do Docker Desktop trên máy này đã có app dùng host port `8080` và database dùng `5432`, [docker-compose.local.yml](docker-compose.local.yml) chỉ dành cho lab cục bộ: map app ra `8082` và không publish port Postgres. Compose chính vẫn giữ mapping chuẩn `8080:8080`; trên VPS có thể dùng trực tiếp `docker compose up -d --build`.
+Do Docker Desktop trên máy này đã có app dùng host port `8080` và database dùng `5432`, [docker-compose.local.yml](docker-compose.local.yml) chỉ dành cho lab cục bộ: map app ra `8082` và không publish port Postgres.
+
+## Bài tập 6: Triển khai Backend qua API Gateway
+
+File [docker-compose.yml](docker-compose.yml) triển khai ba dịch vụ trên cùng Docker bridge network:
+
+- `api-gateway`: Nginx công khai `${GATEWAY_PORT}` (mặc định `8083`), proxy request tới backend.
+- `order-service`: Spring Boot từ image `${ORDER_SERVICE_IMAGE}`, chỉ expose cổng nội bộ `8080`; healthcheck gọi endpoint DB-backed `/health`.
+- `order-db`: PostgreSQL 15 với volume bền vững và `pg_isready`; cổng database không public.
+
+Luồng request: client → Nginx → `order-service:8080` → `order-db:5432`. Docker DNS phân giải tên service trong network riêng; không cần IP container cố định. Gateway đợi backend healthy, backend đợi database healthy. Nginx cũng dùng embedded DNS `127.0.0.11` để làm mới địa chỉ backend khi container được thay thế.
+
+Đặt cấu hình triển khai trong `.env` (bắt đầu từ [.env.example](.env.example)); `.env` bị Git ignore. Thay `ORDER_SERVICE_IMAGE` bằng image tag đã push lên Docker Hub và đặt mật khẩu PostgreSQL mạnh. Trên VPS, cho phép cổng gateway qua firewall rồi chạy `docker compose pull` và `docker compose up -d`. Các lệnh chi tiết: [commands-bai-6.txt](commands-bai-6.txt).
+
+Kiểm tra từ client: `curl -i http://<VPS-IP>:8083/api/health`. Kết quả xác nhận trong local WSL2 lab là HTTP 200:
+
+```json
+{"database":"quickbite_db","status":"UP"}
+```
+
+UFW trên Ubuntu WSL được xác nhận active với rule `8083/tcp ALLOW IN`; đây là IP local của WSL, không phải VPS/public IP. Docker Hub trả `unauthorized` khi kiểm tra `quickbite/order-service:latest`; do đó deployment end-to-end trong lab dùng image local đã build/import. Để pull thật trên VPS, cần push image dưới namespace Docker Hub của bạn, sửa `.env` với tag đó, rồi chạy `docker compose pull`. Không đưa Docker credentials hoặc `.env` lên GitHub.
+
+WSL2 đôi lúc khởi động lại Docker containers giữa các lệnh; trong lúc Spring Boot chưa healthy, request có thể tạm trả 502. Compose hiện gate Nginx theo healthcheck backend, còn retry cuối cùng sau startup trả HTTP 200. Trên VPS ổn định, chờ `docker compose ps` báo backend healthy trước khi kiểm tra API.
