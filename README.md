@@ -151,3 +151,38 @@ Container Docker Desktop có sẵn `butchixanh-shop` cũng dùng Windows port 80
 - Cần chụp `evidence/07-ufw-8081-blocked.png`: từ PowerShell chạy `curl.exe -v --max-time 3 http://172.25.210.151:8081/` và chụp lỗi timeout. Không dùng ảnh trang 8080 làm bằng chứng cho 8081.
 
 Đây là bài thực hành local trên WSL2, không có IP public; phép thử là từ Windows host tới interface IP của Ubuntu WSL.
+
+## Bài tập 5: Phân tích lỗi Docker Compose
+
+### Bản lỗi và nguyên nhân
+
+Bản Compose gốc được lưu tại [docker-compose.before.yml](docker-compose.before.yml). Lệnh `docker compose logs` ghi nhận:
+
+```text
+org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection
+org.postgresql.util.PSQLException: Connection to localhost:5432 refused.
+java.net.ConnectException: Connection refused
+```
+
+Trong network namespace của `order-service`, `localhost` là chính container ứng dụng, không phải container `order-db`. Compose tạo DNS nội bộ theo tên service, vì vậy database phải được gọi bằng `order-db:5432`.
+
+### Bản đã sửa
+
+File [docker-compose.yml](docker-compose.yml) dùng URL `jdbc:postgresql://order-db:5432/quickbite_db`, thêm dependency tới `order-db` và healthcheck `pg_isready`. `depends_on` với điều kiện `service_healthy` đợi database sẵn sàng nhận kết nối, thay vì chỉ đợi container được tạo.
+
+Để xem bản đầy đủ trước/sau:
+
+- Trước: [docker-compose.before.yml](docker-compose.before.yml)
+- Sau: [docker-compose.yml](docker-compose.yml)
+
+Log lỗi và log thành công được lưu tại [logs-bai-5-before.txt](logs-bai-5-before.txt) và [logs-bai-5-after.txt](logs-bai-5-after.txt). Các lệnh tái hiện ở [commands-bai-5.txt](commands-bai-5.txt).
+
+Đã xác nhận sau khi sửa:
+
+```text
+Successfully connected to PostgreSQL database 'quickbite_db'
+GET /health -> HTTP 200
+{"status":"UP","database":"quickbite_db"}
+```
+
+Do Docker Desktop trên máy này đã có app dùng host port `8080` và database dùng `5432`, [docker-compose.local.yml](docker-compose.local.yml) chỉ dành cho lab cục bộ: map app ra `8082` và không publish port Postgres. Compose chính vẫn giữ mapping chuẩn `8080:8080`; trên VPS có thể dùng trực tiếp `docker compose up -d --build`.

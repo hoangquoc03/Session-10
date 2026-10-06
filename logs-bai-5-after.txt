@@ -1,0 +1,11 @@
+Command:
+docker compose -p quickbite -f docker-compose.yml -f docker-compose.local.yml logs --no-color --tail=80 order-service
+
+Observed success:
+2026-10-06T17:18:42.825Z INFO 1 --- [main] c.q.orders.OrderServiceApplication : Started OrderServiceApplication in 4.762 seconds
+2026-10-06T17:18:43.316Z INFO 1 --- [main] c.q.orders.OrderServiceApplication : Successfully connected to PostgreSQL database 'quickbite_db'
+
+HTTP verification:
+GET http://localhost:8082/health
+HTTP/1.1 200
+{"status":"UP","database":"quickbite_db"}

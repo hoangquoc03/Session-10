@@ -1,0 +1,23 @@
+Bai tap 5 - tai hien va sua loi ket noi PostgreSQL
+
+# Build Spring Boot JAR tren host (JDK 21, Maven)
+mvn -q -DskipTests package
+
+# Dung Compose goc co loi; local override doi host port 8080 -> 8082
+# va khong publish PostgreSQL ra host do port 5432 dang duoc su dung.
+docker compose -p quickbite -f docker-compose.before.yml -f docker-compose.local.yml up -d --build
+
+# Lay log loi
+docker compose -p quickbite -f docker-compose.before.yml -f docker-compose.local.yml logs --no-color --since=5m order-service
+
+# Dung stack loi, giu database volume
+# (khong dung -v)
+docker compose -p quickbite -f docker-compose.before.yml -f docker-compose.local.yml down
+
+# Chay file Compose da sua
+docker compose -p quickbite -f docker-compose.yml -f docker-compose.local.yml up -d --build
+
+# Xac minh healthcheck cua database va log ket noi
+docker compose -p quickbite -f docker-compose.yml -f docker-compose.local.yml ps
+docker compose -p quickbite -f docker-compose.yml -f docker-compose.local.yml logs --no-color order-service
+curl.exe -fsS http://localhost:8082/health

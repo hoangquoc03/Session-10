@@ -1,0 +1,9 @@
+Command:
+docker compose -p quickbite -f docker-compose.before.yml -f docker-compose.local.yml logs --no-color --since=5m order-service
+
+Observed failure:
+org.springframework.jdbc.CannotGetJdbcConnectionException: Failed to obtain JDBC Connection
+Caused by: org.postgresql.util.PSQLException: Connection to localhost:5432 refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
+Caused by: java.net.ConnectException: Connection refused
+
+The application container tried localhost:5432. In its network namespace, localhost refers to order-service itself, not the order-db container.

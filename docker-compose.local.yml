@@ -1,0 +1,7 @@
+services:
+  order-service:
+    ports: !override
+      - "8082:8080"
+
+  order-db:
+    ports: !reset []
